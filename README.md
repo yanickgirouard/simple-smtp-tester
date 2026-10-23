@@ -2,9 +2,10 @@
 
 [![Build portable executables](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml/badge.svg)](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml)
 
-Python source plus a build script for standalone, single-file Windows and Linux
-executables. Recipients of the binaries do not need Python or Python packages.
-The raw script requires Python 3.9 or later and uses only the standard library.
+A command-line utility for testing SMTP connections, STARTTLS, authentication,
+and message submission. Standalone Windows and Linux executables do not require
+Python or Python packages. Running the source requires Python 3.9 or later and
+uses only the standard library.
 
 Run the source on Windows (`py -3`) or Linux (`python3`):
 
@@ -128,38 +129,11 @@ Before sharing your own transcript, replace server and client hostnames, email
 addresses, IP addresses, queue IDs, and any other identifying server text with
 generic values, as above.
 
-## Build the portable binaries
+## Standalone executables
 
-The build script uses [PyInstaller](https://pyinstaller.org/en/stable/operating-mode.html)
-to bundle the interpreter and dependencies. **Build on each target OS**:
-Windows produces a Windows executable; Linux produces a Linux executable.
-PyInstaller does not cross-compile between them. No launchers are required.
-
-Windows (PowerShell or Command Prompt):
-
-```text
-py -3 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-build.txt
-.venv\Scripts\python.exe build.py
-```
-
-Linux:
-
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-build.txt
-.venv/bin/python build.py
-```
-
-Outputs on x86-64 hosts (other architectures use their own suffix):
-
-| Build host | Standalone executable |
-| --- | --- |
-| Windows | `dist/smtp-test-windows-x86_64.exe` |
-| Linux | `dist/smtp-test-linux-x86_64` |
-
-Each build also produces a `.sha256` checksum and runs the binary's `--help` as
-a smoke test. Copy the executable to a compatible machine and run it directly:
+Download the executable for your operating system from the repository's
+[Releases](https://github.com/yanickgirouard/simple-smtp-tester/releases) page.
+Copy the executable to a compatible machine and run it directly:
 
 ```text
 smtp-test-windows-x86_64.exe --host smtp.example.com --from sender@example.com --to recipient@example.com --subject "Test" --body "Hello"
@@ -169,43 +143,14 @@ smtp-test-windows-x86_64.exe --host smtp.example.com --from sender@example.com -
 ./smtp-test-linux-x86_64 --host smtp.example.com --from sender@example.com --to recipient@example.com --subject "Test" --body "Hello"
 ```
 
-For both binaries from one build run, push this repository to GitHub and run
-**Actions → Build portable executables → Run workflow**. The workflow builds on
-Windows and Ubuntu 22.04 and uploads both executables and checksums as downloadable
-artifacts. Manual runs build artifacts without publishing a release.
-After extracting a downloaded Linux artifact, restore its executable permission
-if needed with `chmod +x smtp-test-linux-x86_64`.
-
-### Automatic GitHub releases
-
-Push a version tag after committing and pushing the workflow changes:
-
-```sh
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-The workflow tests and builds both operating systems, then creates **one GitHub
-Release for the version**, with separate Windows and Linux executables and their
-SHA-256 checksums attached. The release job runs only when both builds succeed
-and verifies both checksums before publishing. Release notes are generated
-automatically. Downloads appear under the repository's **Releases** page.
-
-Only the release job receives `contents: write`; it uses the repository's built-in
-`GITHUB_TOKEN`, so no personal access token is needed. Repository or organization
-policies must permit that permission. Rerunning an already published tag leaves
-the existing release and its assets unchanged; use a new version tag for updates.
+On Linux, make the downloaded executable runnable with
+`chmod +x smtp-test-linux-x86_64` if needed.
 
 ### Linux distribution compatibility
 
-Linux portability is bounded by CPU architecture, glibc, and system libraries:
-build on the oldest Linux distribution you intend to support. The workflow's
-Linux build targets glibc 2.35 or newer; Alpine/musl is not supported by that build.
-It is intended for compatible x86-64 glibc distributions, rather than every Linux
-distribution. Older glibc systems and ARM systems need separate builds. Having
-glibc 2.35 or newer is a minimum requirement, not a guarantee that all other
-library dependencies are satisfied. See the
-[PyInstaller Linux compatibility guidance](https://pyinstaller.org/en/stable/usage.html#making-gnu-linux-apps-forward-compatible).
+The Linux executable requires an x86-64 system with glibc 2.35 or newer;
+Alpine/musl, older glibc systems, and ARM systems are not supported by this
+release binary. Other system library dependencies must also be available.
 One-file executables unpack bundled libraries into a temporary directory at
 startup. The target must provide writable temporary storage that permits
 executing unpacked code. System CA certificates are used for TLS validation.
