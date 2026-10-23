@@ -13,10 +13,25 @@ Run the source on Windows (`py -3`) or Linux (`python3`):
 python3 smtp_test.py --host smtp.example.com --from sender@example.com --to recipient@example.com --subject "SMTP test" --body "Hello" --username sender@example.com
 ```
 
-Omit `--username` for unauthenticated SMTP. When supplied, the script securely
-prompts for a password; passwords are not passed on the command line or printed.
-Password authentication supports smtplib's CRAM-MD5, PLAIN, and LOGIN mechanisms.
-OAuth is not supported.
+### Supported authentication
+
+The script supports **username/password SMTP authentication** using `CRAM-MD5`,
+`PLAIN`, or `LOGIN`, selected automatically by Python's `smtplib` from the
+mechanisms advertised by the server. Supply `--username` to authenticate; the
+script securely prompts for a password. Passwords are not passed on the command
+line or printed, and authentication occurs only after STARTTLS succeeds.
+
+**OAuth 2.0 / XOAUTH2 is not supported.** The script cannot authenticate to
+accounts that require OAuth, browser sign-in, or an interactive MFA challenge.
+For example, a reply of `250-AUTH LOGIN XOAUTH2` advertises both password-based
+`LOGIN` and OAuth-based `XOAUTH2`, but server or account policies may still block
+password authentication. Advertising `LOGIN` does not guarantee that a particular
+account can use it.
+
+Omit `--username` to skip authentication. Sending then requires the server to
+permit unauthenticated submission from your connection.
+
+### Connection and options
 
 The script uses port **587**, requires **STARTTLS** and TLS 1.2 or newer, validates
 the server certificate, and displays TCP connection, TLS, authentication, and
