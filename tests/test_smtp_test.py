@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import smtp_test
 
@@ -92,7 +92,15 @@ class LocalServer:
             read('STARTTLS')
             send('220 Begin TLS')
             stream.close()
-            connection = self.context.wrap_socket(connection, server_side=True)
+            try:
+                connection = self.context.wrap_socket(connection, server_side=True)
+            except (ssl.SSLError, ConnectionResetError):
+                # A client rejecting this certificate may send a TLS alert or
+                # reset the TCP connection (WinError 10054 on Windows).
+                # Only tolerate these during this intentional handshake failure.
+                if self.mode == 'untrusted':
+                    return
+                raise
             stream = connection.makefile('rwb', buffering=0)
             read('ehlo ')
             send('250-localhost')
@@ -134,9 +142,6 @@ class LocalServer:
             send('250 Queued test-id')
             read('quit')
             send('221 Bye')
-        except ssl.SSLError as error:
-            if self.mode != 'untrusted':
-                self.errors.append(error)
         except Exception as error:
             self.errors.append(error)
         finally:
@@ -145,6 +150,31 @@ class LocalServer:
             if connection:
                 connection.close()
             self.listener.close()
+
+
+class LocalServerTests(unittest.TestCase):
+    def test_handshake_reset_is_expected_only_for_untrusted_certificate(self):
+        for mode in ('untrusted', 'anonymous'):
+            with self.subTest(mode=mode):
+                # Reproduce the Windows peer reset on any OS, without sockets.
+                server = LocalServer.__new__(LocalServer)
+                server.mode = mode
+                server.errors = []
+                server.commands = []
+                server.listener = Mock()
+                connection = Mock()
+                server.listener.accept.return_value = (connection, ('127.0.0.1', 12345))
+                connection.makefile.return_value.readline.side_effect = [
+                    b'ehlo test-client\r\n', b'STARTTLS\r\n']
+                server.context = Mock()
+                reset = ConnectionResetError(10054, 'Connection forcibly closed by peer')
+                server.context.wrap_socket.side_effect = reset
+
+                server.serve()
+
+                self.assertEqual(server.errors, [] if mode == 'untrusted' else [reset])
+                connection.close.assert_called_once()
+                server.listener.close.assert_called_once()
 
 
 @unittest.skipUnless(shutil.which('openssl'), 'TLS tests require openssl')
