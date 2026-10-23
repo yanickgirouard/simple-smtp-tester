@@ -1,4 +1,4 @@
-# SMTP STARTTLS tester
+# Simple SMTP Tester
 
 [![Build portable executables](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml/badge.svg)](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml)
 
