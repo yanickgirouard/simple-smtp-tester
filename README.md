@@ -1,5 +1,7 @@
 # SMTP STARTTLS tester
 
+[![Build portable executables](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml/badge.svg)](https://github.com/yanickgirouard/simple-smtp-tester/actions/workflows/build.yml)
+
 Python source plus a build script for standalone, single-file Windows and Linux
 executables. Recipients of the binaries do not need Python or Python packages.
 The raw script requires Python 3.9 or later and uses only the standard library.
@@ -170,13 +172,40 @@ smtp-test-windows-x86_64.exe --host smtp.example.com --from sender@example.com -
 For both binaries from one build run, push this repository to GitHub and run
 **Actions → Build portable executables → Run workflow**. The workflow builds on
 Windows and Ubuntu 22.04 and uploads both executables and checksums as downloadable
-artifacts. Version tags (`v*`) also trigger it. It does not publish a release.
+artifacts. Manual runs build artifacts without publishing a release.
 After extracting a downloaded Linux artifact, restore its executable permission
 if needed with `chmod +x smtp-test-linux-x86_64`.
+
+### Automatic GitHub releases
+
+Push a version tag after committing and pushing the workflow changes:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow tests and builds both operating systems, then creates **one GitHub
+Release for the version**, with separate Windows and Linux executables and their
+SHA-256 checksums attached. The release job runs only when both builds succeed
+and verifies both checksums before publishing. Release notes are generated
+automatically. Downloads appear under the repository's **Releases** page.
+
+Only the release job receives `contents: write`; it uses the repository's built-in
+`GITHUB_TOKEN`, so no personal access token is needed. Repository or organization
+policies must permit that permission. Rerunning an already published tag leaves
+the existing release and its assets unchanged; use a new version tag for updates.
+
+### Linux distribution compatibility
 
 Linux portability is bounded by CPU architecture, glibc, and system libraries:
 build on the oldest Linux distribution you intend to support. The workflow's
 Linux build targets glibc 2.35 or newer; Alpine/musl is not supported by that build.
+It is intended for compatible x86-64 glibc distributions, rather than every Linux
+distribution. Older glibc systems and ARM systems need separate builds. Having
+glibc 2.35 or newer is a minimum requirement, not a guarantee that all other
+library dependencies are satisfied. See the
+[PyInstaller Linux compatibility guidance](https://pyinstaller.org/en/stable/usage.html#making-gnu-linux-apps-forward-compatible).
 One-file executables unpack bundled libraries into a temporary directory at
 startup. The target must provide writable temporary storage that permits
 executing unpacked code. System CA certificates are used for TLS validation.

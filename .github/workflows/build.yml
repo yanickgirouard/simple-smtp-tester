@@ -30,3 +30,38 @@ jobs:
           name: smtp-test-${{ runner.os }}-x86_64
           path: dist/*
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: smtp-test-*-x86_64
+          merge-multiple: true
+          path: dist
+      - name: Verify release assets
+        working-directory: dist
+        run: |
+          test -f smtp-test-windows-x86_64.exe
+          test -f smtp-test-linux-x86_64
+          sha256sum --check smtp-test-windows-x86_64.exe.sha256
+          sha256sum --check smtp-test-linux-x86_64.sha256
+      - name: Publish release with Windows and Linux binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; leaving its assets unchanged."
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" dist/* \
+            --verify-tag --generate-notes --title "$RELEASE_TAG"
