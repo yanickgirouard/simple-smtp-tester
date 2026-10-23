@@ -10,6 +10,14 @@ import subprocess
 import sys
 
 
+def write_checksum(binary):
+    digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+    # Write bytes to prevent Windows text mode from translating LF into CRLF.
+    # GNU sha256sum otherwise interprets the CR as part of the asset filename.
+    binary.with_name(binary.name + '.sha256').write_bytes(
+        '{}  {}\n'.format(digest, binary.name).encode('ascii'))
+
+
 def main():
     system = platform.system().lower()
     if system not in ('windows', 'linux'):
@@ -35,9 +43,7 @@ def main():
     ], check=True, cwd=root, env=environment)
     binary = root / 'dist' / (name + ('.exe' if system == 'windows' else ''))
     subprocess.run([str(binary), '--help'], check=True)
-    digest = hashlib.sha256(binary.read_bytes()).hexdigest()
-    binary.with_name(binary.name + '.sha256').write_text(
-        '{}  {}\n'.format(digest, binary.name), encoding='ascii')
+    write_checksum(binary)
     print('\nPortable executable: {}'.format(binary))
     return 0
 
